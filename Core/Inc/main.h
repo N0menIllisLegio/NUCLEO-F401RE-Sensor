@@ -60,6 +60,7 @@ uint16_t AddLineToFile(const char *fileName, const char *line);
 void GetFileName(char *fileName);
 void FormatOutputLine(char *line, uint16_t sensorValue);
 uint16_t GetSensorValue(void);
+void Print(char *line);
 
 /* USER CODE END EFP */
 

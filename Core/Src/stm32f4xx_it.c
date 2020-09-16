@@ -235,7 +235,11 @@ void TIM1_UP_TIM10_IRQHandler(void)
 	sensorValue = GetSensorValue();
 	FormatOutputLine(line, sensorValue);
 	GetFileName(fileName);
-	AddLineToFile(fileName, line);
+
+	if (AddLineToFile(fileName, line) == 0)
+	{
+		Print(line);
+	}
 
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
 

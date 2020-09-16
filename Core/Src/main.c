@@ -18,7 +18,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-
 #include "main.h"
 #include "fatfs.h"
 
@@ -54,12 +53,12 @@ SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart2;
+
 /* USER CODE BEGIN PV */
 
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
-
-char ErrorMessage[1000];
 
 uint8_t Day, Month, Year, Hour, Minute, Second, Weekday;
 
@@ -72,13 +71,16 @@ static void MX_ADC1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-//SDFileSystem sd(p5, p6, p7, p8, "Storage");
+
+void InitDateTime(void);
+
 /* USER CODE END 0 */
 
 /**
@@ -88,17 +90,6 @@ static void MX_TIM1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
-	//TIM1 set to 30 seconds repeat
-
-	// Inital date/time
-	Day = 15;
-	Month = RTC_MONTH_SEPTEMBER;
-	Year = 20;
-	Hour = 0;
-	Minute = 20;
-	Second = 14;
-	Weekday = RTC_WEEKDAY_TUESDAY;
 
   /* USER CODE END 1 */
 
@@ -125,7 +116,13 @@ int main(void)
   MX_FATFS_Init();
   MX_RTC_Init();
   MX_TIM1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  // TIM1 set to 30 seconds repeat
+
+  // Inital date/time
+  InitDateTime();
 
   HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE END 2 */
@@ -255,6 +252,7 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END RTC_Init 0 */
 
+
   /* USER CODE BEGIN RTC_Init 1 */
 
   /* USER CODE END RTC_Init 1 */
@@ -278,19 +276,19 @@ static void MX_RTC_Init(void)
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = Hour;
-  sTime.Minutes = Minute;
-  sTime.Seconds = Second;
+  sTime.Hours = 21;
+  sTime.Minutes = 40;
+  sTime.Seconds = 0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
   if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
   {
     Error_Handler();
   }
-  sDate.WeekDay = Weekday;
-  sDate.Month = Month;
-  sDate.Date = Day;
-  sDate.Year = Year;
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_SEPTEMBER;
+  sDate.Date = 14;
+  sDate.Year = 20;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
   {
@@ -363,8 +361,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 44999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
-  //htim1.Init.RepetitionCounter = 240;
+  htim1.Init.RepetitionCounter = 0; //240
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
@@ -384,6 +381,39 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
 
 }
 
@@ -414,14 +444,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USART_TX_Pin USART_RX_Pin */
-  GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -440,6 +462,26 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void InitDateTime(void)
+{
+	sDate.Date = 15;
+	sDate.Month = RTC_MONTH_SEPTEMBER;
+	sDate.Year = 20;
+	sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
+
+	sTime.Hours = 0;
+	sTime.Minutes = 20;
+	sTime.Seconds = 15;
+
+	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+}
+
+void Print(char *line)
+{
+	HAL_UART_Transmit(&huart2, (uint8_t *) line, strlen (line), HAL_MAX_DELAY);
+}
+
 uint16_t GetSensorValue(void)
 {
 	  uint16_t sensorValue = 0;
@@ -452,7 +494,8 @@ uint16_t GetSensorValue(void)
 void FormatOutputLine(char *line, uint16_t sensorValue)
 {
 	 HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	 snprintf(line, 63, "%d:%d:%d - %d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+	 HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+	 snprintf(line, 63, "%d-%d-%d,%d:%d:%d,%d\n", sDate.Year, sDate.Month, sDate.Date, sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
 }
 
 void GetFileName(char *fileName)
@@ -467,12 +510,17 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 	FRESULT fResult;
 	FIL file;
 	UINT bWriten;
+	char ErrorMessage[100];
+
+	// To reset if SD was ejected.
+	MX_FATFS_DeInit();
+	MX_FATFS_Init();
 
 	fResult = f_mount(&fs, "/", 1);
 
 	if(fResult != FR_OK)
 	{
-		strcpy(ErrorMessage, "Failed to mount SD");
+		Print("Failed to mount SD\n");
 		return fResult;
 	}
 
@@ -480,7 +528,8 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 
 	if(fResult != FR_OK)
 	{
-		strcpy(ErrorMessage, strcat("Failed to open file: ", fileName));
+		snprintf(ErrorMessage, 40, "Failed to open file: %s\n", fileName);
+		Print(ErrorMessage);
 		f_mount(NULL, "/", 1);
 		return fResult;
 	}
@@ -489,7 +538,8 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 
 	if(fResult != FR_OK)
 	{
-		strcpy(ErrorMessage, strcat("Failed to write in file: ", fileName));
+		snprintf(ErrorMessage, 40, "Failed to write in file: %s\n", fileName);
+		Print(ErrorMessage);
 		f_close(&file);
 		f_mount(NULL, "/", 1);
 		return fResult;
@@ -499,7 +549,8 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 
 	if(fResult != FR_OK)
 	{
-		strcpy(ErrorMessage, strcat("Failed to close file: ", fileName));
+		snprintf(ErrorMessage, 40, "Failed to close file: %s\n", fileName);
+		Print(ErrorMessage);
 		f_mount(NULL, "/", 1);
 		return fResult;
 	}
@@ -508,14 +559,12 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 
 	if(fResult != FR_OK)
 	{
-		strcpy(ErrorMessage, "Failed to unmount SD");
+		Print("Failed to unmount SD");
 	}
 
 	return fResult;
 
-  //fResult = f_open(&file, fileName, FA_READ);
-  //f_read (&file, buffer, f_size(&file), &br);
-  //f_close(&file);
+
 }
 
 /* USER CODE END 4 */
