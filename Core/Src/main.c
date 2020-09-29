@@ -494,17 +494,48 @@ uint16_t GetSensorValue(void)
 void FormatOutputLine(char *line, uint16_t sensorValue)
 {
 	 HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	 HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-	 snprintf(line, 63, "%d-%d-%d,%d:%d:%d,%d\n", sDate.Year, sDate.Month, sDate.Date, sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+	 snprintf(line, 63, "%d:%d:%d;%d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
 }
 
 void GetFileName(char *fileName)
 {
 	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-	snprintf(fileName, 63, "%d-%d-20%d.txt", sDate.Date, sDate.Month, sDate.Year);
+	snprintf(fileName, 63, "%d.csv", sDate.Date);
 }
 
-uint16_t AddLineToFile(const char *fileName, const char *line)
+
+void CreateDirectory(char *dirName)
+{
+	FATFS fs;
+	FRESULT fResult;
+
+	MX_FATFS_DeInit();
+	MX_FATFS_Init();
+
+	fResult = f_mount(&fs, "/", 1);
+
+	fResult = f_mkdir(dirName);
+}
+
+void CheckPath(char *path)
+{
+	char fileName[50];
+	GetFileName(fileName);
+
+	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+	snprintf(path, 100, "%d", sDate.Year);
+
+	CreateDirectory(path);
+
+	snprintf(path, 100, "%d/%d", sDate.Year, sDate.Month);
+
+	CreateDirectory(path);
+
+	snprintf(path, 100, "%d/%d/%s", sDate.Year, sDate.Month, fileName);
+}
+
+uint16_t AddLineToFile(const char *line)
 {
 	FATFS fs;
 	FRESULT fResult;
@@ -524,11 +555,14 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 		return fResult;
 	}
 
-	fResult = f_open(&file, fileName, FA_OPEN_APPEND | FA_WRITE | FA_READ);
+	char path[100];
+	CheckPath(path);
+
+	fResult = f_open(&file, path, FA_OPEN_APPEND | FA_WRITE | FA_READ);
 
 	if(fResult != FR_OK)
 	{
-		snprintf(ErrorMessage, 40, "Failed to open file: %s\n", fileName);
+		snprintf(ErrorMessage, 100, "Failed to open file: %s\n", path);
 		Print(ErrorMessage);
 		f_mount(NULL, "/", 1);
 		return fResult;
@@ -538,7 +572,7 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 
 	if(fResult != FR_OK)
 	{
-		snprintf(ErrorMessage, 40, "Failed to write in file: %s\n", fileName);
+		snprintf(ErrorMessage, 100, "Failed to write in file: %s\n", path);
 		Print(ErrorMessage);
 		f_close(&file);
 		f_mount(NULL, "/", 1);
@@ -549,7 +583,7 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 
 	if(fResult != FR_OK)
 	{
-		snprintf(ErrorMessage, 40, "Failed to close file: %s\n", fileName);
+		snprintf(ErrorMessage, 100, "Failed to close file: %s\n", path);
 		Print(ErrorMessage);
 		f_mount(NULL, "/", 1);
 		return fResult;
@@ -563,8 +597,6 @@ uint16_t AddLineToFile(const char *fileName, const char *line)
 	}
 
 	return fResult;
-
-
 }
 
 /* USER CODE END 4 */

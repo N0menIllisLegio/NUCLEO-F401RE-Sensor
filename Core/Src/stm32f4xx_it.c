@@ -234,9 +234,8 @@ void TIM1_UP_TIM10_IRQHandler(void)
 
 	sensorValue = GetSensorValue();
 	FormatOutputLine(line, sensorValue);
-	GetFileName(fileName);
 
-	if (AddLineToFile(fileName, line) == 0)
+	if (AddLineToFile(line) == 0)
 	{
 		Print(line);
 	}
