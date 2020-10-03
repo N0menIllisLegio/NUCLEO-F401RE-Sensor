@@ -596,12 +596,12 @@ void ReadConfigs(char *buffer, UINT *bytesRead)
 	}
 }
 
-uint8_t ParseParameter(char *buffer, const char *param, uint8_t defaultValue)
+uint32_t ParseParameter(char *buffer, const char *param, uint32_t defaultValue)
 {
 	char *parameterStr = strstr(buffer, param);
 	uint8_t pointer = strlen(param);
-	uint8_t conversionError = 0;
-	uint8_t result = 0;
+	uint32_t conversionError = 0;
+	uint32_t result = 0;
 
 	while(parameterStr[pointer] != ';' && conversionError == 0)
 	{
@@ -641,6 +641,8 @@ void LoadConfigs(void)
 
 	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+	htim1.Instance->RCR = ParseParameter(buffer, "RepetitionCounter=", 0);
 }
 
 /* USER CODE END 4 */
