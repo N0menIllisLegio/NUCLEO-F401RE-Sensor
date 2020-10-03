@@ -57,7 +57,6 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 
 uint16_t AddLineToFile(const char *line);
-void GetFileName(char *fileName);
 void FormatOutputLine(char *line, uint16_t sensorValue);
 uint16_t GetSensorValue(void);
 void Print(char *line);

@@ -79,7 +79,7 @@ static void MX_USART2_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void InitDateTime(void);
+void LoadConfigs(void);
 
 /* USER CODE END 0 */
 
@@ -122,7 +122,7 @@ int main(void)
   // TIM1 set to 30 seconds repeat
 
   // Inital date/time
-  InitDateTime();
+  LoadConfigs();
 
   HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE END 2 */
@@ -462,21 +462,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void InitDateTime(void)
-{
-	sDate.Date = 15;
-	sDate.Month = RTC_MONTH_SEPTEMBER;
-	sDate.Year = 20;
-	sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
-
-	sTime.Hours = 0;
-	sTime.Minutes = 20;
-	sTime.Seconds = 15;
-
-	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-}
-
 void Print(char *line)
 {
 	HAL_UART_Transmit(&huart2, (uint8_t *) line, strlen (line), HAL_MAX_DELAY);
@@ -484,37 +469,23 @@ void Print(char *line)
 
 uint16_t GetSensorValue(void)
 {
-	  uint16_t sensorValue = 0;
-	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	  sensorValue = HAL_ADC_GetValue(&hadc1);
-	  return sensorValue;
+	uint16_t sensorValue = 0;
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	sensorValue = HAL_ADC_GetValue(&hadc1);
+	return sensorValue;
 }
 
 void FormatOutputLine(char *line, uint16_t sensorValue)
 {
-	 HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	 snprintf(line, 63, "%d:%d:%d;%d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	snprintf(line, 63, "%d:%d:%d;%d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
 }
 
 void GetFileName(char *fileName)
 {
 	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 	snprintf(fileName, 63, "%d.csv", sDate.Date);
-}
-
-
-void CreateDirectory(char *dirName)
-{
-	FATFS fs;
-	FRESULT fResult;
-
-	MX_FATFS_DeInit();
-	MX_FATFS_Init();
-
-	fResult = f_mount(&fs, "/", 1);
-
-	fResult = f_mkdir(dirName);
 }
 
 void CheckPath(char *path)
@@ -526,11 +497,11 @@ void CheckPath(char *path)
 
 	snprintf(path, 100, "%d", sDate.Year);
 
-	CreateDirectory(path);
+	f_mkdir(path);
 
 	snprintf(path, 100, "%d/%d", sDate.Year, sDate.Month);
 
-	CreateDirectory(path);
+	f_mkdir(path);
 
 	snprintf(path, 100, "%d/%d/%s", sDate.Year, sDate.Month, fileName);
 }
@@ -597,6 +568,79 @@ uint16_t AddLineToFile(const char *line)
 	}
 
 	return fResult;
+}
+
+void ReadConfigs(char *buffer, UINT *bytesRead)
+{
+	const char path[] = "config.txt";
+	FATFS fs;
+	FRESULT fResult;
+	FIL file;
+
+	MX_FATFS_DeInit();
+	MX_FATFS_Init();
+
+	fResult = f_mount(&fs, "/", 1);
+
+	if(fResult == FR_OK)
+	{
+		fResult = f_open(&file, path, FA_READ);
+
+		if(fResult == FR_OK)
+		{
+			f_read(&file, buffer, f_size(&file), bytesRead);
+			f_close(&file);
+		}
+
+		f_mount(NULL, "/", 1);
+	}
+}
+
+uint8_t ParseParameter(char *buffer, const char *param, uint8_t defaultValue)
+{
+	char *parameterStr = strstr(buffer, param);
+	uint8_t pointer = strlen(param);
+	uint8_t conversionError = 0;
+	uint8_t result = 0;
+
+	while(parameterStr[pointer] != ';' && conversionError == 0)
+	{
+		if(parameterStr[pointer] >= '0' && parameterStr[pointer] <= '9')
+		{
+			result = (result * 10) + (parameterStr[pointer++] - '0');
+		}
+		else
+		{
+			conversionError = 1;
+		}
+	}
+
+	if(conversionError == 1)
+	{
+		return defaultValue;
+	}
+
+	return result;
+}
+
+void LoadConfigs(void)
+{
+	char buffer[4000];
+	UINT bytesRead;
+
+	ReadConfigs(buffer, &bytesRead);
+
+	sDate.Date = ParseParameter(buffer, "Date=", 1);
+	sDate.Month = ParseParameter(buffer, "Month=", 1);
+	sDate.Year = ParseParameter(buffer, "Year=", 70);
+	sDate.WeekDay = ParseParameter(buffer, "WeekDay=", 4);
+
+	sTime.Hours = ParseParameter(buffer, "Hours=", 0);
+	sTime.Minutes = ParseParameter(buffer, "Minutes=", 0);
+	sTime.Seconds = ParseParameter(buffer, "Seconds=", 0);
+
+	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 }
 
 /* USER CODE END 4 */
