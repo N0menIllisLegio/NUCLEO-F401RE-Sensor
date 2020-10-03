@@ -229,16 +229,11 @@ void TIM1_UP_TIM10_IRQHandler(void)
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_SET);
 
 	uint16_t sensorValue = 0;
-	char fileName[64] = "";
 	char line[64] = "";
 
 	sensorValue = GetSensorValue();
 	FormatOutputLine(line, sensorValue);
-
-	if (AddLineToFile(line) == 0)
-	{
-		Print(line);
-	}
+	AddLineToFile(line);
 
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
 
