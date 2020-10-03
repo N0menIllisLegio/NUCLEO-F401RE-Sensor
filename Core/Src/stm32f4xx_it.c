@@ -23,6 +23,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -226,16 +227,8 @@ void SysTick_Handler(void)
 void TIM1_UP_TIM10_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 0 */
-	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_SET);
 
-	uint16_t sensorValue = 0;
-	char line[64] = "";
-
-	sensorValue = GetSensorValue();
-	FormatOutputLine(line, sensorValue);
-	AddLineToFile(line);
-
-	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
+	WriteSensorData();
 
   /* USER CODE END TIM1_UP_TIM10_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);

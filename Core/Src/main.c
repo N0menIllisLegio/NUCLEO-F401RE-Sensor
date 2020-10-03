@@ -23,10 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 #include "fatfs_sd.h"
 #include <string.h>
 #include <stdio.h>
+#include "MicroSD.h"
 
 /* USER CODE END Includes */
 
@@ -57,8 +57,6 @@ TIM_HandleTypeDef htim1;
 
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
-
-uint8_t Day, Month, Year, Hour, Minute, Second, Weekday;
 
 /* USER CODE END PV */
 
@@ -417,122 +415,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-uint16_t GetSensorValue(void)
-{
-	uint16_t sensorValue = 0;
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	sensorValue = HAL_ADC_GetValue(&hadc1);
-	return sensorValue;
-}
-
-void FormatOutputLine(char *line, uint16_t sensorValue)
-{
-	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	snprintf(line, 63, "%d:%d:%d;%d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
-}
-
-void GetFileName(char *fileName)
-{
-	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-	snprintf(fileName, 63, "%d.csv", sDate.Date);
-}
-
-void CheckPath(char *path)
-{
-	char fileName[50];
-	GetFileName(fileName);
-
-	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-
-	snprintf(path, 100, "%d", sDate.Year);
-
-	f_mkdir(path);
-
-	snprintf(path, 100, "%d/%d", sDate.Year, sDate.Month);
-
-	f_mkdir(path);
-
-	snprintf(path, 100, "%d/%d/%s", sDate.Year, sDate.Month, fileName);
-}
-
-uint16_t AddLineToFile(const char *line)
-{
-	FATFS fs;
-	FRESULT fResult;
-	FIL file;
-	UINT bWriten;
-
-	// To reset if SD was ejected.
-	MX_FATFS_DeInit();
-	MX_FATFS_Init();
-
-	fResult = f_mount(&fs, "/", 1);
-
-	if(fResult != FR_OK)
-	{
-		return fResult;
-	}
-
-	char path[100];
-	CheckPath(path);
-
-	fResult = f_open(&file, path, FA_OPEN_APPEND | FA_WRITE | FA_READ);
-
-	if(fResult != FR_OK)
-	{
-		f_mount(NULL, "/", 1);
-		return fResult;
-	}
-
-	fResult = f_write(&file, line, strlen(line), &bWriten);
-
-	if(fResult != FR_OK)
-	{
-		f_close(&file);
-		f_mount(NULL, "/", 1);
-		return fResult;
-	}
-
-	fResult = f_close(&file);
-
-	if(fResult != FR_OK)
-	{
-		f_mount(NULL, "/", 1);
-		return fResult;
-	}
-
-	fResult = f_mount(NULL, "/", 1);
-
-	return fResult;
-}
-
-void ReadConfigs(char *buffer, UINT *bytesRead)
-{
-	const char path[] = "config.txt";
-	FATFS fs;
-	FRESULT fResult;
-	FIL file;
-
-	MX_FATFS_DeInit();
-	MX_FATFS_Init();
-
-	fResult = f_mount(&fs, "/", 1);
-
-	if(fResult == FR_OK)
-	{
-		fResult = f_open(&file, path, FA_READ);
-
-		if(fResult == FR_OK)
-		{
-			f_read(&file, buffer, f_size(&file), bytesRead);
-			f_close(&file);
-		}
-
-		f_mount(NULL, "/", 1);
-	}
-}
-
 uint32_t ParseParameter(char *buffer, const char *param, uint32_t defaultValue)
 {
 	char *parameterStr = strstr(buffer, param);
@@ -562,7 +444,7 @@ uint32_t ParseParameter(char *buffer, const char *param, uint32_t defaultValue)
 
 void LoadConfigs(void)
 {
-	char buffer[4000];
+	char buffer[1000];
 	UINT bytesRead;
 
 	ReadConfigs(buffer, &bytesRead);
@@ -580,6 +462,31 @@ void LoadConfigs(void)
 	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
 	htim1.Instance->RCR = ParseParameter(buffer, "RepetitionCounter=", 0);
+}
+
+uint16_t GetSensorValue(void)
+{
+	uint16_t sensorValue = 0;
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	sensorValue = HAL_ADC_GetValue(&hadc1);
+
+	return sensorValue;
+}
+
+void WriteSensorData(void)
+{
+	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_SET);
+
+	char line[64] = "";
+	uint16_t sensorValue = GetSensorValue();
+
+	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	snprintf(line, 63, "%d:%d:%d;%d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+
+	WriteFile(line);
+
+	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
 }
 
 /* USER CODE END 4 */
