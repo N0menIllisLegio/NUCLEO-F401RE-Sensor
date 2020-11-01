@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "MicroSD.h"
+#include "wifi.h"
 
 /* USER CODE END Includes */
 
@@ -52,21 +53,55 @@ RTC_HandleTypeDef hrtc;
 SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
+
+UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
 
+int ServerQueriesSocketID = -1;
+int GasSensorSocketID = -1;
+
+// ---------------------------------------
+// ------------ CONFIG VARS --------------
+// ---------------------------------------
+char SSID[] = "";
+char SecKey[] = "";
+char IP[] = "";
+char Protocol[] = "t";
+int Port = 8888;
+WiFi_Priv_Mode PrivMode = WPA_Personal;
+
+// how many tries will make MC to transmit data if
+// response from server will be invalid (corrupt)
+uint16_t Retries = 5;
+
+// how often will data send on server
+uint16_t ServerTransmitRepetitionCounter = 10;
+
+// how often will server be asked for data MB const?
+uint16_t ServerReceiveRepetitionCounter = 5;
+
+// ---------------------------------------
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -106,19 +141,33 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_SPI2_Init();
   MX_FATFS_Init();
   MX_RTC_Init();
   MX_TIM1_Init();
+  MX_USART1_UART_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   // TIM1 set to 30 seconds repeat
 
   // Inital date/time
   LoadConfigs();
+  WiFi_Connect(SSID, SecKey, PrivMode);
 
-  HAL_TIM_Base_Start_IT(&htim1);
+	if (WiFi_PingServer(IP) == WiFi_MODULE_SUCCESS)
+	{
+	  GasSensorSocketID = Socket_Connect(IP, Port, Protocol);
+	  ServerQueriesSocketID = Socket_Connect(IP, Port, Protocol);
+	}
+
+	HAL_TIM_Base_Start_IT(&htim1);
+	HAL_TIM_Base_Start_IT(&htim2);
+	HAL_TIM_Base_Start_IT(&htim3);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -354,7 +403,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 44999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0; // 240
+  htim1.Init.RepetitionCounter = 240;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
@@ -374,6 +423,145 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 84;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 10000000;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 65534;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 64100;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 
 }
 
@@ -487,6 +675,87 @@ void WriteSensorData(void)
 	WriteFile(line);
 
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
+}
+
+void FromatSensorValueForWiFi(char *result)
+{
+	uint16_t sensorValue = GetSensorValue();
+
+	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	snprintf(result, 30, "%d/%d/%d %d:%d:%d - %d", sDate.Date, sDate.Month, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+}
+
+void SendData(const char *data)
+{
+	WiFi_Status_t wifi_status = WiFi_MODULE_SUCCESS;
+
+	if(WiFi_PingServer(IP) != WiFi_MODULE_SUCCESS)
+	{
+		wifi_status = WiFi_Connect(SSID, SecKey, PrivMode);
+	}
+
+	if(wifi_status == WiFi_MODULE_SUCCESS)
+	{
+		if(Socket_CheckConnection(GasSensorSocketID) == 0)
+		{
+			GasSensorSocketID = Socket_Connect(IP, Port, Protocol);
+		}
+
+		if(GasSensorSocketID != -1)
+		{
+			Socket_Status_t status;
+			char receivedData[10];
+			int try = Retries;
+
+			do
+			{
+				status = Socket_TransmitData(GasSensorSocketID, data);
+
+				if(status == Socket_SUCCESS)
+				{
+					Socket_ReadData(GasSensorSocketID, receivedData);
+				}
+
+				try--;
+			} while(strstr(receivedData, SERVER_OK_RESP) == NULL && try > 0);
+		}
+	}
+}
+
+void CheckRequests()
+{
+	WiFi_Status_t wifi_status = WiFi_MODULE_SUCCESS;
+
+	if(WiFi_PingServer(IP) != WiFi_MODULE_SUCCESS)
+	{
+		wifi_status = WiFi_Connect(SSID, SecKey, PrivMode);
+	}
+
+	if(wifi_status == WiFi_MODULE_SUCCESS)
+	{
+		if(Socket_CheckConnection(ServerQueriesSocketID) == 0)
+		{
+			ServerQueriesSocketID = Socket_Connect(IP, Port, Protocol);
+		}
+
+		if(ServerQueriesSocketID != -1)
+		{
+			char receivedData[10];
+			Socket_Status_t status = Socket_TransmitData(ServerQueriesSocketID, SERVER_REQUEST);
+
+			if(status == Socket_SUCCESS)
+			{
+				Socket_ReadData(ServerQueriesSocketID, receivedData);
+			}
+
+			if(strstr(receivedData, SERVER_SV_RESP) != NULL)
+			{
+				char sensorData[30];
+				FromatSensorValueForWiFi(sensorData);
+				SendData(sensorData);
+			}
+		}
+	}
 }
 
 /* USER CODE END 4 */

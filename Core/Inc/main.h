@@ -57,6 +57,9 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 
 void WriteSensorData(void);
+void FromatSensorValueForWiFi(char *result);
+void CheckRequests();
+void SendData(const char *data);
 
 /* USER CODE END EFP */
 
