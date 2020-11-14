@@ -70,22 +70,9 @@ int GasSensorSocketID = -1;
 // ---------------------------------------
 // ------------ CONFIG VARS --------------
 // ---------------------------------------
-char SSID[] = "";
-char SecKey[] = "";
-char IP[] = "";
-char Protocol[] = "t";
-int Port = 8888;
-WiFi_Priv_Mode PrivMode = WPA_Personal;
 
-// how many tries will make MC to transmit data if
-// response from server will be invalid (corrupt)
-uint16_t Retries = 5;
-
-// how often will data send on server
-uint16_t ServerTransmitRepetitionCounter = 10;
-
-// how often will server be asked for data MB const?
-uint16_t ServerReceiveRepetitionCounter = 5;
+WiFi_GeneralInfo wifi_info;
+MC_GeneralInfo mc_info;
 
 // ---------------------------------------
 
@@ -155,13 +142,14 @@ int main(void)
   // TIM1 set to 30 seconds repeat
 
   // Inital date/time
-  LoadConfigs();
-  WiFi_Connect(SSID, SecKey, PrivMode);
 
-	if (WiFi_PingServer(IP) == WiFi_MODULE_SUCCESS)
+  LoadConfigs();
+  WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
+
+	if (WiFi_PingServer(wifi_info.IP) == WiFi_MODULE_SUCCESS)
 	{
-	  GasSensorSocketID = Socket_Connect(IP, Port, Protocol);
-	  ServerQueriesSocketID = Socket_Connect(IP, Port, Protocol);
+	  GasSensorSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
+	  ServerQueriesSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 	}
 
 	HAL_TIM_Base_Start_IT(&htim1);
@@ -295,6 +283,9 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END RTC_Init 0 */
 
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
   /* USER CODE BEGIN RTC_Init 1 */
 
   /* USER CODE END RTC_Init 1 */
@@ -399,11 +390,11 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 55999;
+  htim1.Init.Prescaler = 62500;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 44999;
+  htim1.Init.Period = 6720;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 240;
+  htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
@@ -445,9 +436,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 84;
+  htim2.Init.Prescaler = 62500;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10000000;
+  htim2.Init.Period = 13440;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -490,9 +481,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 65534;
+  htim3.Init.Prescaler = 64088;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 64100;
+  htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -603,7 +594,7 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-uint32_t ParseParameter(char *buffer, const char *param, uint32_t defaultValue)
+uint32_t ParseIntParameter(char *buffer, const char *param, uint32_t defaultValue)
 {
 	char *parameterStr = strstr(buffer, param);
 	uint8_t pointer = strlen(param);
@@ -630,6 +621,14 @@ uint32_t ParseParameter(char *buffer, const char *param, uint32_t defaultValue)
 	return result;
 }
 
+void ParseStrParameter(char *buffer, const char *param, char *result, size_t arraySize)
+{
+	char *parameterStr = strstr(buffer, param);
+	uint8_t pointer = strlen(param);
+	memccpy(result, parameterStr + pointer, ';', arraySize);
+	result[strlen(result) - 1] = '\0';
+}
+
 void LoadConfigs(void)
 {
 	char buffer[1000];
@@ -637,19 +636,46 @@ void LoadConfigs(void)
 
 	ReadConfigs(buffer, &bytesRead);
 
-	sDate.Date = ParseParameter(buffer, "Date=", 1);
-	sDate.Month = ParseParameter(buffer, "Month=", 1);
-	sDate.Year = ParseParameter(buffer, "Year=", 70);
-	sDate.WeekDay = ParseParameter(buffer, "WeekDay=", 4);
+	sDate.Date = ParseIntParameter(buffer, "Date=", 1);
+	sDate.Month = ParseIntParameter(buffer, "Month=", 1);
+	sDate.Year = ParseIntParameter(buffer, "Year=", 70);
+	sDate.WeekDay = ParseIntParameter(buffer, "WeekDay=", 4);
 
-	sTime.Hours = ParseParameter(buffer, "Hours=", 0);
-	sTime.Minutes = ParseParameter(buffer, "Minutes=", 0);
-	sTime.Seconds = ParseParameter(buffer, "Seconds=", 0);
+	sTime.Hours = ParseIntParameter(buffer, "Hours=", 0);
+	sTime.Minutes = ParseIntParameter(buffer, "Minutes=", 0);
+	sTime.Seconds = ParseIntParameter(buffer, "Seconds=", 0);
 
 	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-	htim1.Instance->RCR = ParseParameter(buffer, "RepetitionCounter=", 0);
+	wifi_info.Port = ParseIntParameter(buffer, "Port=", 0);
+	wifi_info.PrivMode = ParseIntParameter(buffer, "PrivateMode=", 0);
+	wifi_info.TransmitRetries = ParseIntParameter(buffer, "TransmitRetries=", 0);
+	ParseStrParameter(buffer, "SSID=", wifi_info.SSID, sizeof(wifi_info.SSID));
+	ParseStrParameter(buffer, "SecurityKey=", wifi_info.SecKey, sizeof(wifi_info.SecKey));
+	ParseStrParameter(buffer, "IP=", wifi_info.IP, sizeof(wifi_info.IP));
+	ParseStrParameter(buffer, "Protocol=", wifi_info.Protocol, sizeof(wifi_info.Protocol));
+
+	ParseStrParameter(buffer, "OwnerName=", mc_info.OwnerName, sizeof(mc_info.OwnerName));
+	ParseStrParameter(buffer, "MicrocontrollerName=", mc_info.MicrocontrollerName, sizeof(mc_info.MicrocontrollerName));
+	ParseStrParameter(buffer, "MicrocontrollerPassword=", mc_info.MicrocontrollerPass, sizeof(mc_info.MicrocontrollerPass));
+	ParseStrParameter(buffer, "SensorName=", mc_info.SensorName, sizeof(mc_info.SensorName));
+
+	int writeSDPeriodScale = ParseIntParameter(buffer, "WriteSDPeriodScale=", DefaultSecondsBetweenSDWrite);
+	int transmitPeriodScale = ParseIntParameter(buffer, "TransmitPeriodScale=", DefaultSecondsBetweenWifiTransmit);
+
+	if(writeSDPeriodScale > 3195660 || writeSDPeriodScale < DefaultSecondsBetweenSDWrite)
+	{
+//		writeSDPeriodScale = DefaultSecondsBetweenSDWrite;
+	}
+
+	if(transmitPeriodScale > 3195660 || transmitPeriodScale < DefaultSecondsBetweenWifiTransmit)
+	{
+//		transmitPeriodScale = DefaultSecondsBetweenWifiTransmit;
+	}
+
+	htim1.Instance->ARR = writeSDPeriodScale * TactsInOneSecond;
+	htim2.Instance->ARR = transmitPeriodScale * TactsInOneSecond;
 }
 
 uint16_t GetSensorValue(void)
@@ -677,35 +703,37 @@ void WriteSensorData(void)
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
 }
 
-void FromatSensorValueForWiFi(char *result)
+void FromatSensorValueForWiFi(char *result, size_t size)
 {
 	uint16_t sensorValue = GetSensorValue();
-
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	snprintf(result, 30, "%d/%d/%d %d:%d:%d - %d", sDate.Date, sDate.Month, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+	snprintf(result, size, "%s|%s;%d/%d/%d %d:%d:%d;%d", SERVER_DATA,
+			mc_info.SensorName,
+			sDate.Month, sDate.Date, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds,
+			sensorValue);
 }
 
 void SendData(const char *data)
 {
 	WiFi_Status_t wifi_status = WiFi_MODULE_SUCCESS;
 
-	if(WiFi_PingServer(IP) != WiFi_MODULE_SUCCESS)
+	if(WiFi_PingServer(wifi_info.IP) != WiFi_MODULE_SUCCESS)
 	{
-		wifi_status = WiFi_Connect(SSID, SecKey, PrivMode);
+		wifi_status = WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
 	}
 
 	if(wifi_status == WiFi_MODULE_SUCCESS)
 	{
 		if(Socket_CheckConnection(GasSensorSocketID) == 0)
 		{
-			GasSensorSocketID = Socket_Connect(IP, Port, Protocol);
+			GasSensorSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 		}
 
 		if(GasSensorSocketID != -1)
 		{
 			Socket_Status_t status;
 			char receivedData[10];
-			int try = Retries;
+			int try = wifi_info.TransmitRetries;
 
 			do
 			{
@@ -726,33 +754,33 @@ void CheckRequests()
 {
 	WiFi_Status_t wifi_status = WiFi_MODULE_SUCCESS;
 
-	if(WiFi_PingServer(IP) != WiFi_MODULE_SUCCESS)
+	if(WiFi_PingServer(wifi_info.IP) != WiFi_MODULE_SUCCESS)
 	{
-		wifi_status = WiFi_Connect(SSID, SecKey, PrivMode);
+		wifi_status = WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
 	}
 
 	if(wifi_status == WiFi_MODULE_SUCCESS)
 	{
 		if(Socket_CheckConnection(ServerQueriesSocketID) == 0)
 		{
-			ServerQueriesSocketID = Socket_Connect(IP, Port, Protocol);
+			ServerQueriesSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 		}
 
 		if(ServerQueriesSocketID != -1)
 		{
-			char receivedData[10];
 			Socket_Status_t status = Socket_TransmitData(ServerQueriesSocketID, SERVER_REQUEST);
 
 			if(status == Socket_SUCCESS)
 			{
+				char receivedData[10];
 				Socket_ReadData(ServerQueriesSocketID, receivedData);
-			}
 
-			if(strstr(receivedData, SERVER_SV_RESP) != NULL)
-			{
-				char sensorData[30];
-				FromatSensorValueForWiFi(sensorData);
-				SendData(sensorData);
+				if(strstr(receivedData, SERVER_SV_RESP) != NULL)
+				{
+					char sensorData[TransmitDataLength];
+					FromatSensorValueForWiFi(sensorData, TransmitDataLength);
+					SendData(sensorData);
+				}
 			}
 		}
 	}

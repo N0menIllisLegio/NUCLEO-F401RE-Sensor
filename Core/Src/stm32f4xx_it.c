@@ -105,6 +105,10 @@ void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
 
+	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_SET);
+
+	HAL_NVIC_SystemReset();
+
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
@@ -247,8 +251,8 @@ void TIM1_UP_TIM10_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-	char sensorData[30];
-	FromatSensorValueForWiFi(sensorData);
+	char sensorData[TransmitDataLength];
+	FromatSensorValueForWiFi(sensorData, TransmitDataLength);
 	SendData(sensorData);
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);

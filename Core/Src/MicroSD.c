@@ -6,28 +6,29 @@
 #include <string.h>
 #include <stdio.h>
 
-void GetFileName(char *fileName)
+void GetFileName(char *fileName, size_t fileNameLength)
 {
 	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-	snprintf(fileName, 10, "%d.csv", sDate.Date);
+	snprintf(fileName, fileNameLength, "%d.csv", sDate.Date);
 }
 
-void CreatePath(char *path)
+void CreatePath(char *path, size_t pathLength)
 {
-	char fileName[10];
-	GetFileName(fileName);
+	size_t fileNameLength = 10;
+	char fileName[fileNameLength];
+	GetFileName(fileName, fileNameLength);
 
 	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-	snprintf(path, 30, "%d", sDate.Year);
+	snprintf(path, pathLength, "%d", sDate.Year);
 
 	f_mkdir(path);
 
-	snprintf(path, 30, "%d/%d", sDate.Year, sDate.Month);
+	snprintf(path, pathLength, "%d/%d", sDate.Year, sDate.Month);
 
 	f_mkdir(path);
 
-	snprintf(path, 30, "%d/%d/%s", sDate.Year, sDate.Month, fileName);
+	snprintf(path, pathLength, "%d/%d/%s", sDate.Year, sDate.Month, fileName);
 }
 
 void WriteFile(const char *line)
@@ -35,7 +36,8 @@ void WriteFile(const char *line)
 	FATFS fs;
 	FIL file;
 	UINT bWriten;
-	char path[30];
+	size_t pathLength = 30;
+	char path[pathLength];
 
 	// To reset if SD was ejected.
 	MX_FATFS_DeInit();
@@ -43,7 +45,7 @@ void WriteFile(const char *line)
 
 	if(f_mount(&fs, "/", 1) == FR_OK)
 	{
-		CreatePath(path);
+		CreatePath(path, pathLength);
 
 		if(f_open(&file, path, FA_OPEN_APPEND | FA_WRITE) == FR_OK)
 		{

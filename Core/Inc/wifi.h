@@ -32,10 +32,10 @@
 
 #define SERVER_OK_RESP							"Server_OK"
 #define SERVER_AT_RESP							"Server_AT"
-#define SERVER_REQUEST							"STM_RQ"
-// SV - SensorValue
 #define SERVER_SV_RESP							"Server_SV"
-
+#define SERVER_REQUEST							"STM_RQ"
+#define SERVER_AUTH 							"STM_AUTH"
+#define SERVER_DATA 							"STM_DATA"
 
 typedef enum
 {
@@ -84,6 +84,18 @@ typedef enum
   WEB_SOCKET = 0x1,
   NET_SOCKET = 0x2
 } WiFi_Socket_t;
+
+
+typedef struct
+{
+	int Port;
+	int TransmitRetries;
+	WiFi_Priv_Mode PrivMode;
+	char SSID[31];
+	char SecKey[31];
+	char IP[16];
+	char Protocol[2];
+} WiFi_GeneralInfo;
 
 // PPs
 

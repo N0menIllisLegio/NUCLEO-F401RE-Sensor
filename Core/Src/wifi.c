@@ -9,6 +9,7 @@
 char Resp_Buff[1000];
 char Cmd_Buff[1024];
 extern UART_HandleTypeDef huart1;
+extern MC_GeneralInfo mc_info;
 
 void ReceiveData()
 {
@@ -140,6 +141,30 @@ WiFi_Status_t WiFi_PingServer(const char* hostName)
 // ----------------------------- SOCKET ------------------------------------
 // -------------------------------------------------------------------------
 
+Socket_Status_t Socket_Authenticate(int SocketID)
+{
+	int dataLength = 120;
+	char transmitData[dataLength];
+	char receivedData[10];
+	snprintf(transmitData, dataLength, "%s;%s;%s|%s", mc_info.OwnerName, mc_info.MicrocontrollerName,
+			mc_info.MicrocontrollerPass, SERVER_AUTH);
+
+	Socket_Status_t status = Socket_TransmitData(SocketID, transmitData);
+
+	if(status == Socket_SUCCESS)
+	{
+		Socket_ReadData(SocketID, receivedData);
+
+		if(strstr(receivedData, SERVER_OK_RESP) != NULL)
+		{
+			return Socket_SUCCESS;
+		}
+	}
+
+	return Socket_ERROR;
+}
+
+
 int Socket_Connect(const char * hostName, int port, const char * protocol)
 {
 	WiFi_ResetBuffer();
@@ -151,7 +176,11 @@ int Socket_Connect(const char * hostName, int port, const char * protocol)
 	if(WiFi_ReceiveResponse(AT_RESP, 5) == WiFi_MODULE_SUCCESS)
 	{
 		char *id = strstr(Resp_Buff, "ID: ");
-		return (*(id + 4) - '0') * 10 + (*(id + 5) - '0');
+		int socketID = (*(id + 4) - '0') * 10 + (*(id + 5) - '0');
+		if (Socket_Authenticate(socketID) == Socket_SUCCESS)
+		{
+			return socketID;
+		}
 	}
 
 	return -1;
@@ -227,7 +256,7 @@ Socket_Status_t Socket_TransmitData(int SocketID, const char *data)
 
 Socket_Status_t Socket_ReadData(int SocketID, char *data)
 {
-	HAL_Delay(300);
+	HAL_Delay(400);
 
 	int receivedDataLen = Socket_GetPendingDataLength(SocketID);
 
@@ -244,9 +273,8 @@ Socket_Status_t Socket_ReadData(int SocketID, char *data)
 int Socket_CheckConnection(int SocketID)
 {
 	char receivedData[10];
-	Socket_Status_t status = Socket_TransmitData(SocketID, "AT");
+	Socket_Status_t status = Socket_TransmitData(SocketID, "STM_AT");
 
-	// HAL_Delay(300);
 	if (status == Socket_SUCCESS)
 	{
 		if (Socket_ReadData(SocketID, receivedData) == Socket_SUCCESS)
