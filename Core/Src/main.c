@@ -139,10 +139,6 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
-  // TIM1 set to 30 seconds repeat
-
-  // Inital date/time
-
   LoadConfigs();
   WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
 

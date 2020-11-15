@@ -104,7 +104,6 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_SET);
 
 	HAL_NVIC_SystemReset();
