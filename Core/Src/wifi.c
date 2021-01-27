@@ -147,7 +147,7 @@ Socket_Status_t Socket_Authenticate(int SocketID)
 	char transmitData[dataLength];
 	char receivedData[10];
 	snprintf(transmitData, dataLength, "%s|%s;%s;%s", SERVER_AUTH,
-			mc_info.OwnerName, mc_info.MicrocontrollerName, mc_info.MicrocontrollerPass);
+			mc_info.OwnerID, mc_info.MicrocontrollerID, mc_info.MicrocontrollerPassword);
 
 	Socket_Status_t status = Socket_TransmitData(SocketID, transmitData);
 

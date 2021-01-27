@@ -652,26 +652,26 @@ void LoadConfigs(void)
 	ParseStrParameter(buffer, "IP=", wifi_info.IP, sizeof(wifi_info.IP));
 	ParseStrParameter(buffer, "Protocol=", wifi_info.Protocol, sizeof(wifi_info.Protocol));
 
-	ParseStrParameter(buffer, "OwnerName=", mc_info.OwnerName, sizeof(mc_info.OwnerName));
-	ParseStrParameter(buffer, "MicrocontrollerName=", mc_info.MicrocontrollerName, sizeof(mc_info.MicrocontrollerName));
-	ParseStrParameter(buffer, "MicrocontrollerPassword=", mc_info.MicrocontrollerPass, sizeof(mc_info.MicrocontrollerPass));
-	ParseStrParameter(buffer, "SensorName=", mc_info.SensorName, sizeof(mc_info.SensorName));
+	ParseStrParameter(buffer, "OwnerID=", mc_info.OwnerID, sizeof(mc_info.OwnerID));
+	ParseStrParameter(buffer, "MicrocontrollerID=", mc_info.MicrocontrollerID, sizeof(mc_info.MicrocontrollerID));
+	ParseStrParameter(buffer, "SensorID=", mc_info.SensorID, sizeof(mc_info.SensorID));
+	ParseStrParameter(buffer, "MicrocontrollerPassword=", mc_info.MicrocontrollerPassword, sizeof(mc_info.MicrocontrollerPassword));
 
-	int writeSDPeriodScale = ParseIntParameter(buffer, "WriteSDPeriodScale=", DefaultSecondsBetweenSDWrite);
-	int transmitPeriodScale = ParseIntParameter(buffer, "TransmitPeriodScale=", DefaultSecondsBetweenWifiTransmit);
+	int writeSDPeriodSeconds = ParseIntParameter(buffer, "WriteSDPeriodSeconds=", MinSecondsBetweenSDWrite);
+	int transmitPeriodSeconds = ParseIntParameter(buffer, "TransmitPeriodSeconds=", MinSecondsBetweenWifiTransmit);
 
-	if(writeSDPeriodScale > 3195660 || writeSDPeriodScale < DefaultSecondsBetweenSDWrite)
+	if(writeSDPeriodSeconds > MaxSecondsBetweenSDWrite || writeSDPeriodSeconds < MinSecondsBetweenSDWrite)
 	{
-//		writeSDPeriodScale = DefaultSecondsBetweenSDWrite;
+		writeSDPeriodSeconds = MinSecondsBetweenSDWrite;
 	}
 
-	if(transmitPeriodScale > 3195660 || transmitPeriodScale < DefaultSecondsBetweenWifiTransmit)
+	if(transmitPeriodSeconds > MaxSecondsBetweenWifiTransmit || transmitPeriodSeconds < MinSecondsBetweenWifiTransmit)
 	{
-//		transmitPeriodScale = DefaultSecondsBetweenWifiTransmit;
+		transmitPeriodSeconds = MinSecondsBetweenWifiTransmit;
 	}
 
-	htim1.Instance->ARR = writeSDPeriodScale * TactsInOneSecond;
-	htim2.Instance->ARR = transmitPeriodScale * TactsInOneSecond;
+	htim1.Instance->ARR = writeSDPeriodSeconds * TactsInOneSecond;
+	htim2.Instance->ARR = transmitPeriodSeconds * TactsInOneSecond;
 }
 
 uint16_t GetSensorValue(void)
@@ -704,7 +704,7 @@ void FromatSensorValueForWiFi(char *result, size_t size)
 	uint16_t sensorValue = GetSensorValue();
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	snprintf(result, size, "%s|%s;%d/%d/%d %d:%d:%d;%d", SERVER_DATA,
-			mc_info.SensorName,
+			mc_info.SensorID,
 			sDate.Month, sDate.Date, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds,
 			sensorValue);
 }

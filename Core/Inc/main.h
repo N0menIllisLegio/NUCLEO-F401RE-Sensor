@@ -40,10 +40,10 @@ extern "C" {
 
 typedef struct
 {
-	char OwnerName[50];
-	char SensorName[50];
-	char MicrocontrollerName[50];
-	char MicrocontrollerPass[20];
+	char OwnerID[50];
+	char SensorID[50];
+	char MicrocontrollerID[50];
+	char MicrocontrollerPassword[20];
 } MC_GeneralInfo;
 
 /* USER CODE END ET */
@@ -77,8 +77,10 @@ void SendData(const char *data);
 #define GasSensor_GPIO_Port GPIOC
 /* USER CODE BEGIN Private defines */
 #define TactsInOneSecond 1344
-#define DefaultSecondsBetweenSDWrite 60
-#define DefaultSecondsBetweenWifiTransmit 1800
+#define MinSecondsBetweenSDWrite 60
+#define MinSecondsBetweenWifiTransmit 10 //1800
+#define MaxSecondsBetweenSDWrite 3195660
+#define MaxSecondsBetweenWifiTransmit 3195660
 #define TransmitDataLength 200
 /* USER CODE END Private defines */
 
