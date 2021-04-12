@@ -188,6 +188,9 @@ int Socket_Connect(const char * hostName, int port, const char * protocol)
 
 void Socket_Close(int* socketID)
 {
+	char flushData[50];
+	Socket_ReadData(*socketID, flushData);
+
 	WiFi_ResetBuffer();
 	sprintf(Cmd_Buff, AT_SOCKET_CLOSE, *socketID);
 

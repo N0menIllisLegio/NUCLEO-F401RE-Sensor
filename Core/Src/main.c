@@ -750,6 +750,8 @@ void SendData(const char *data)
 
 				try--;
 			} while(strstr(receivedData, SERVER_OK_RESP) == NULL && try > 0);
+
+			Socket_Close(&ServerQueriesSocketID);
 		}
 	}
 }
@@ -820,6 +822,8 @@ void CheckRequests()
 					} while(strstr(receivedData, SERVER_OK_RESP) == NULL && try > 0);
 				}
 			}
+
+			Socket_Close(&ServerQueriesSocketID);
 		}
 	}
 }

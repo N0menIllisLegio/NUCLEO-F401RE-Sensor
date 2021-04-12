@@ -24,7 +24,7 @@
 #define WIFI_PRIV_MODE                          "wifi_priv_mode"
 #define WIFI_MODE                               "wifi_mode"
 
-#define AT_SOCKET_OPEN                          "AT+S.SOCKON=%s,%d,%s,ind\r"
+#define AT_SOCKET_OPEN                          "AT+S.SOCKON=%s,%d,%s\r"
 #define AT_SOCKET_WRITE                         "AT+S.SOCKW=%d,%d\r"
 #define AT_SOCKET_READ                          "AT+S.SOCKR=%d,%d\r"
 #define AT_QUERY_PENDING_DATA                   "AT+S.SOCKQ=%d\r"
