@@ -62,9 +62,10 @@ typedef struct
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+uint16_t GetSensorValue(void);
+int ReadDataFromSensor(const char* sensorID, uint16_t* sensorValue);
 void WriteSensorData(void);
-void FromatSensorValueForWiFi(char *result, size_t size);
+void FromatSensorValueForWiFi(uint16_t sensorValue, char *result, size_t size);
 void CheckRequests();
 void SendData(const char *data);
 

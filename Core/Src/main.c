@@ -91,12 +91,13 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
+void LoadConfigs(void);
+void SynchronizeDateTime();
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void LoadConfigs(void);
 
 /* USER CODE END 0 */
 
@@ -142,10 +143,9 @@ int main(void)
   LoadConfigs();
   WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
 
-	if (WiFi_PingServer(wifi_info.IP) == WiFi_MODULE_SUCCESS)
+  	if (WiFi_PingServer(wifi_info.IP) == WiFi_MODULE_SUCCESS)
 	{
-	  GasSensorSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
-	  ServerQueriesSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
+  		SynchronizeDateTime();
 	}
 
 	HAL_TIM_Base_Start_IT(&htim1);
@@ -699,9 +699,8 @@ void WriteSensorData(void)
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
 }
 
-void FromatSensorValueForWiFi(char *result, size_t size)
+void FromatSensorValueForWiFi(uint16_t sensorValue, char *result, size_t size)
 {
-	uint16_t sensorValue = GetSensorValue();
 	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	snprintf(result, size, "%s|%s;%d/%d/%d %d:%d:%d;%d", SERVER_DATA,
 			mc_info.SensorID,
@@ -720,10 +719,19 @@ void SendData(const char *data)
 
 	if(wifi_status == WiFi_MODULE_SUCCESS)
 	{
+		/*
 		if(Socket_CheckConnection(GasSensorSocketID) == 0)
 		{
 			GasSensorSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 		}
+		 */
+
+		if (GasSensorSocketID != -1)
+		{
+			Socket_Close(&GasSensorSocketID);
+		}
+
+		GasSensorSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 
 		if(GasSensorSocketID != -1)
 		{
@@ -757,10 +765,18 @@ void CheckRequests()
 
 	if(wifi_status == WiFi_MODULE_SUCCESS)
 	{
+		/*
 		if(Socket_CheckConnection(ServerQueriesSocketID) == 0)
 		{
 			ServerQueriesSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 		}
+		*/
+		if (ServerQueriesSocketID != -1)
+		{
+			Socket_Close(&ServerQueriesSocketID);
+		}
+
+		ServerQueriesSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 
 		if(ServerQueriesSocketID != -1)
 		{
@@ -768,18 +784,74 @@ void CheckRequests()
 
 			if(status == Socket_SUCCESS)
 			{
-				char receivedData[10];
+				char receivedData[47];
 				Socket_ReadData(ServerQueriesSocketID, receivedData);
 
 				if(strstr(receivedData, SERVER_SV_RESP) != NULL)
 				{
+					char queriedSensorID[37];
+					ParseStrParameter(receivedData, "Server_SV|", queriedSensorID, sizeof(queriedSensorID));
+					queriedSensorID[36] = '\0';
+
+					uint16_t sensorValue;
+					if (ReadDataFromSensor(queriedSensorID, &sensorValue) == 0)
+					{
+						Socket_Close(&ServerQueriesSocketID);
+						return;
+					}
+
 					char sensorData[TransmitDataLength];
-					FromatSensorValueForWiFi(sensorData, TransmitDataLength);
-					SendData(sensorData);
+					FromatSensorValueForWiFi(sensorValue, sensorData, TransmitDataLength);
+
+					Socket_Status_t status;
+					char receivedData[10];
+					int try = wifi_info.TransmitRetries;
+
+					do
+					{
+						status = Socket_TransmitData(ServerQueriesSocketID, sensorData);
+
+						if(status == Socket_SUCCESS)
+						{
+							Socket_ReadData(ServerQueriesSocketID, receivedData);
+						}
+
+						try--;
+					} while(strstr(receivedData, SERVER_OK_RESP) == NULL && try > 0);
 				}
 			}
 		}
 	}
+}
+
+int ReadDataFromSensor(const char* sensorID, uint16_t* sensorValue)
+{
+	if (strcasecmp(sensorID, mc_info.SensorID) == 0)
+	{
+		*sensorValue = GetSensorValue();
+		return 1;
+	}
+
+	return 0;
+}
+
+void SynchronizeDateTime()
+{
+	char buffer[1000];
+
+	// receive data;
+
+	sDate.Date = ParseIntParameter(buffer, "Date=", 1);
+	sDate.Month = ParseIntParameter(buffer, "Month=", 1);
+	sDate.Year = ParseIntParameter(buffer, "Year=", 70);
+	sDate.WeekDay = ParseIntParameter(buffer, "WeekDay=", 4);
+
+	sTime.Hours = ParseIntParameter(buffer, "Hours=", 0);
+	sTime.Minutes = ParseIntParameter(buffer, "Minutes=", 0);
+	sTime.Seconds = ParseIntParameter(buffer, "Seconds=", 0);
+
+	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 }
 
 /* USER CODE END 4 */

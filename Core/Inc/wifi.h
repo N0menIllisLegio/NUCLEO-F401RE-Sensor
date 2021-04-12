@@ -106,6 +106,7 @@ Socket_Status_t Socket_TransmitData(int SocketID, const char *data);
 int Socket_GetPendingDataLength(int SocketID);
 int Socket_CheckConnection(int SocketID);
 Socket_Status_t Socket_ReadData(int SocketID, char *data);
+void Socket_Close(int* socketID);
 
 void WiFi_SetCommand(char * command);
 WiFi_Status_t WiFi_SetPowerState(WiFi_Power_State_t state);

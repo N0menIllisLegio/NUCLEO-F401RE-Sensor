@@ -251,7 +251,8 @@ void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
 	char sensorData[TransmitDataLength];
-	FromatSensorValueForWiFi(sensorData, TransmitDataLength);
+	uint16_t sensorValue = GetSensorValue();
+	FromatSensorValueForWiFi(sensorValue, sensorData, TransmitDataLength);
 	SendData(sensorData);
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);

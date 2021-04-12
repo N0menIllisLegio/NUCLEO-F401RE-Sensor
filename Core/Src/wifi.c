@@ -186,6 +186,17 @@ int Socket_Connect(const char * hostName, int port, const char * protocol)
 	return -1;
 }
 
+void Socket_Close(int* socketID)
+{
+	WiFi_ResetBuffer();
+	sprintf(Cmd_Buff, AT_SOCKET_CLOSE, *socketID);
+
+	if(WiFi_TransmitCommand() != WiFi_MODULE_SUCCESS)
+		return;
+
+	*socketID = -1;
+}
+
 // -1 - Error
 int Socket_GetPendingDataLength(int SocketID)
 {
