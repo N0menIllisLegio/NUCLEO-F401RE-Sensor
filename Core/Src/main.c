@@ -145,10 +145,10 @@ int main(void)
   LoadConfigs();
   WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
 
+	HAL_TIM_Base_Start_IT(&htim4);
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
-	HAL_TIM_Base_Start_IT(&htim4);
 
   /* USER CODE END 2 */
 
@@ -762,13 +762,6 @@ void SendData(const char *data)
 
 	if(wifi_status == WiFi_MODULE_SUCCESS)
 	{
-		/*
-		if(Socket_CheckConnection(GasSensorSocketID) == 0)
-		{
-			GasSensorSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
-		}
-		 */
-
 		if (GasSensorSocketID != -1)
 		{
 			Socket_Close(&GasSensorSocketID);
@@ -780,19 +773,11 @@ void SendData(const char *data)
 		{
 			Socket_Status_t status;
 			char receivedData[10];
-			int try = wifi_info.TransmitRetries;
 
-			do
+			if(Socket_TransmitData(GasSensorSocketID, data) == Socket_SUCCESS)
 			{
-				status = Socket_TransmitData(GasSensorSocketID, data);
-
-				if(status == Socket_SUCCESS)
-				{
-					Socket_ReadData(GasSensorSocketID, receivedData);
-				}
-
-				try--;
-			} while(strstr(receivedData, SERVER_OK_RESP) == NULL && try > 0);
+				Socket_ReadData(GasSensorSocketID, receivedData);
+			}
 
 			Socket_Close(&ServerQueriesSocketID);
 		}
@@ -810,12 +795,6 @@ void CheckRequests()
 
 	if(wifi_status == WiFi_MODULE_SUCCESS)
 	{
-		/*
-		if(Socket_CheckConnection(ServerQueriesSocketID) == 0)
-		{
-			ServerQueriesSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
-		}
-		*/
 		if (ServerQueriesSocketID != -1)
 		{
 			Socket_Close(&ServerQueriesSocketID);
@@ -839,30 +818,19 @@ void CheckRequests()
 					queriedSensorID[36] = '\0';
 
 					uint16_t sensorValue;
-					if (ReadDataFromSensor(queriedSensorID, &sensorValue) == 0)
+					if (ReadDataFromSensor(queriedSensorID, &sensorValue) == 1)
 					{
-						Socket_Close(&ServerQueriesSocketID);
-						return;
-					}
+						char sensorData[TransmitDataLength];
+						FromatSensorValueForWiFi(sensorValue, sensorData, TransmitDataLength);
 
-					char sensorData[TransmitDataLength];
-					FromatSensorValueForWiFi(sensorValue, sensorData, TransmitDataLength);
+						Socket_Status_t status;
+						char receivedData[10];
 
-					Socket_Status_t status;
-					char receivedData[10];
-					int try = wifi_info.TransmitRetries;
-
-					do
-					{
-						status = Socket_TransmitData(ServerQueriesSocketID, sensorData);
-
-						if(status == Socket_SUCCESS)
+						if(Socket_TransmitData(ServerQueriesSocketID, sensorData) == Socket_SUCCESS)
 						{
 							Socket_ReadData(ServerQueriesSocketID, receivedData);
 						}
-
-						try--;
-					} while(strstr(receivedData, SERVER_OK_RESP) == NULL && try > 0);
+					}
 				}
 			}
 
