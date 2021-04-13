@@ -66,8 +66,9 @@ uint16_t GetSensorValue(void);
 int ReadDataFromSensor(const char* sensorID, uint16_t* sensorValue);
 void WriteSensorData(void);
 void FromatSensorValueForWiFi(uint16_t sensorValue, char *result, size_t size);
-void CheckRequests();
+void CheckRequests(void);
 void SendData(const char *data);
+void SynchronizeDateTime(void);
 
 /* USER CODE END EFP */
 

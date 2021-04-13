@@ -33,9 +33,11 @@
 #define SERVER_OK_RESP							"Server_OK"
 #define SERVER_AT_RESP							"Server_AT"
 #define SERVER_SV_RESP							"Server_SV"
+#define SERVER_DT_RESP							"Server_DT"
 #define SERVER_REQUEST							"STM_RQ"
 #define SERVER_AUTH 							"STM_AUTH"
 #define SERVER_DATA 							"STM_DATA"
+#define STM_DATETIME 							"STM_DT"
 
 typedef enum
 {

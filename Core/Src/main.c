@@ -94,7 +94,6 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 void LoadConfigs(void);
-void SynchronizeDateTime();
 
 /* USER CODE END PFP */
 
@@ -146,14 +145,10 @@ int main(void)
   LoadConfigs();
   WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
 
-  	if (WiFi_PingServer(wifi_info.IP) == WiFi_MODULE_SUCCESS)
-	{
-  		//SynchronizeDateTime();
-	}
-
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim3);
+	HAL_TIM_Base_Start_IT(&htim4);
 
   /* USER CODE END 2 */
 
@@ -889,21 +884,54 @@ int ReadDataFromSensor(const char* sensorID, uint16_t* sensorValue)
 
 void SynchronizeDateTime()
 {
-	char buffer[1000];
+	WiFi_Status_t wifi_status = WiFi_MODULE_SUCCESS;
 
-	// receive data;
+	if(WiFi_PingServer(wifi_info.IP) != WiFi_MODULE_SUCCESS)
+	{
+		wifi_status = WiFi_Connect(wifi_info.SSID, wifi_info.SecKey, wifi_info.PrivMode);
+	}
 
-	sDate.Date = ParseIntParameter(buffer, "Date=", 1);
-	sDate.Month = ParseIntParameter(buffer, "Month=", 1);
-	sDate.Year = ParseIntParameter(buffer, "Year=", 70);
-	sDate.WeekDay = ParseIntParameter(buffer, "WeekDay=", 4);
+	if(wifi_status == WiFi_MODULE_SUCCESS)
+	{
+		int dateTimeSocketID = Socket_Connect(wifi_info.IP, wifi_info.Port, wifi_info.Protocol);
 
-	sTime.Hours = ParseIntParameter(buffer, "Hours=", 0);
-	sTime.Minutes = ParseIntParameter(buffer, "Minutes=", 0);
-	sTime.Seconds = ParseIntParameter(buffer, "Seconds=", 0);
+		if(dateTimeSocketID != -1)
+		{
+			Socket_Status_t status;
+			char receivedData[80];
+			char sendData[25];
 
-	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+			snprintf(sendData, sizeof(sendData), "%s|%d/%d/%d %d:%d:%d", STM_DATETIME,
+				sDate.Month, sDate.Date, sDate.Year,
+				sTime.Hours, sTime.Minutes, sTime.Seconds);
+
+			status = Socket_TransmitData(dateTimeSocketID, sendData);
+
+			if(status == Socket_SUCCESS)
+			{
+				Socket_ReadData(dateTimeSocketID, receivedData);
+
+				if (strstr(receivedData, SERVER_DT_RESP) != NULL)
+				{
+					sDate.Date = ParseIntParameter(receivedData, "Date=", 1);
+					sDate.Month = ParseIntParameter(receivedData, "Month=", 1);
+					sDate.Year = ParseIntParameter(receivedData, "Year=", 70);
+					sDate.WeekDay = ParseIntParameter(receivedData, "WeekDay=", 4);
+
+					sTime.Hours = ParseIntParameter(receivedData, "Hours=", 0);
+					sTime.Minutes = ParseIntParameter(receivedData, "Minutes=", 0);
+					sTime.Seconds = ParseIntParameter(receivedData, "Seconds=", 0);
+
+					HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+					HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+					HAL_TIM_Base_Stop_IT(&htim4);
+				}
+			}
+
+			Socket_Close(&dateTimeSocketID);
+		}
+	}
 }
 
 /* USER CODE END 4 */
