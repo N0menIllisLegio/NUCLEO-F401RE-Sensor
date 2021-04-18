@@ -771,7 +771,6 @@ void SendData(const char *data)
 
 		if(GasSensorSocketID != -1)
 		{
-			Socket_Status_t status;
 			char receivedData[10];
 
 			if(Socket_TransmitData(GasSensorSocketID, data) == Socket_SUCCESS)
@@ -823,7 +822,6 @@ void CheckRequests()
 						char sensorData[TransmitDataLength];
 						FromatSensorValueForWiFi(sensorValue, sensorData, TransmitDataLength);
 
-						Socket_Status_t status;
 						char receivedData[10];
 
 						if(Socket_TransmitData(ServerQueriesSocketID, sensorData) == Socket_SUCCESS)
