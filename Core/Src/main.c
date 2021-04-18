@@ -73,7 +73,6 @@ int GasSensorSocketID = -1;
 // ---------------------------------------
 
 WiFi_GeneralInfo wifi_info;
-MC_GeneralInfo mc_info;
 
 // ---------------------------------------
 
@@ -727,17 +726,20 @@ uint16_t GetSensorValue(void)
 	return sensorValue;
 }
 
-void WriteSensorData(void)
+void WriteSensorData(const char* sensorID)
 {
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_SET);
 
-	char line[64] = "";
-	uint16_t sensorValue = GetSensorValue();
+	uint16_t sensorValue;
+	if (ReadDataFromSensor(sensorID, &sensorValue) == 1)
+	{
+		char line[100];
 
-	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-	snprintf(line, 63, "%d:%d:%d;%d\n", sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
+		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+		snprintf(line, 99, "%s;%d:%d:%d;%d\n", sensorID, sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
 
-	WriteFile(line);
+		WriteFile(line);
+	}
 
 	HAL_GPIO_WritePin(GPIOA, LD2_Pin, GPIO_PIN_RESET);
 }

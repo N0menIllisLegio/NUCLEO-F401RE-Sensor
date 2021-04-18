@@ -51,6 +51,8 @@ typedef struct
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
 
+MC_GeneralInfo mc_info;
+
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -64,7 +66,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 uint16_t GetSensorValue(void);
 int ReadDataFromSensor(const char* sensorID, uint16_t* sensorValue);
-void WriteSensorData(void);
+void WriteSensorData(const char* sensorID);
 void FromatSensorValueForWiFi(uint16_t sensorValue, char *result, size_t size);
 void CheckRequests(void);
 void SendData(const char *data);
