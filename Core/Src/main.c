@@ -688,7 +688,6 @@ void LoadConfigs(void)
 
 	wifi_info.Port = ParseIntParameter(buffer, "Port=", 0);
 	wifi_info.PrivMode = ParseIntParameter(buffer, "PrivateMode=", 0);
-	wifi_info.TransmitRetries = ParseIntParameter(buffer, "TransmitRetries=", 0);
 	ParseStrParameter(buffer, "SSID=", wifi_info.SSID, sizeof(wifi_info.SSID));
 	ParseStrParameter(buffer, "SecurityKey=", wifi_info.SecKey, sizeof(wifi_info.SecKey));
 	ParseStrParameter(buffer, "IP=", wifi_info.IP, sizeof(wifi_info.IP));

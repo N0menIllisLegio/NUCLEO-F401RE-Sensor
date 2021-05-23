@@ -91,7 +91,6 @@ typedef enum
 typedef struct
 {
 	int Port;
-	int TransmitRetries;
 	WiFi_Priv_Mode PrivMode;
 	char SSID[31];
 	char SecKey[31];
