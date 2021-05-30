@@ -83,8 +83,10 @@ void SynchronizeDateTime(void);
 #define TactsInOneSecond 1344
 #define MinSecondsBetweenSDWrite 60
 #define MinSecondsBetweenWifiTransmit 10 //1800
+#define MinSecondsBetweenWifiRequest 30 //900
 #define MaxSecondsBetweenSDWrite 3195660
 #define MaxSecondsBetweenWifiTransmit 3195660
+#define MaxSecondsBetweenWifiRequest 3195660
 #define TransmitDataLength 200
 /* USER CODE END Private defines */
 

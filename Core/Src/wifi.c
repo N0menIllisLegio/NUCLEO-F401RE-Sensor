@@ -270,7 +270,7 @@ Socket_Status_t Socket_TransmitData(int SocketID, const char *data)
 
 Socket_Status_t Socket_ReadData(int SocketID, char *data)
 {
-	HAL_Delay(400);
+	HAL_Delay(1000);
 
 	int receivedDataLen = Socket_GetPendingDataLength(SocketID);
 

@@ -474,9 +474,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 64088;
+  htim3.Init.Prescaler = 62500;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 65535;
+  htim3.Init.Period = 26880;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -700,19 +700,38 @@ void LoadConfigs(void)
 
 	int writeSDPeriodSeconds = ParseIntParameter(buffer, "WriteSDPeriodSeconds=", MinSecondsBetweenSDWrite);
 	int transmitPeriodSeconds = ParseIntParameter(buffer, "TransmitPeriodSeconds=", MinSecondsBetweenWifiTransmit);
+	int requestPeriodSeconds = ParseIntParameter(buffer, "RequestPeriodSeconds=", MinSecondsBetweenWifiRequest);
 
-	if(writeSDPeriodSeconds > MaxSecondsBetweenSDWrite || writeSDPeriodSeconds < MinSecondsBetweenSDWrite)
+	if(writeSDPeriodSeconds > MaxSecondsBetweenSDWrite)
+	{
+		writeSDPeriodSeconds = MaxSecondsBetweenSDWrite;
+	}
+	else if (writeSDPeriodSeconds < MinSecondsBetweenSDWrite)
 	{
 		writeSDPeriodSeconds = MinSecondsBetweenSDWrite;
 	}
 
-	if(transmitPeriodSeconds > MaxSecondsBetweenWifiTransmit || transmitPeriodSeconds < MinSecondsBetweenWifiTransmit)
+	if(transmitPeriodSeconds > MaxSecondsBetweenWifiTransmit)
+	{
+		transmitPeriodSeconds = MaxSecondsBetweenWifiTransmit;
+	}
+	else if (transmitPeriodSeconds < MinSecondsBetweenWifiTransmit)
 	{
 		transmitPeriodSeconds = MinSecondsBetweenWifiTransmit;
 	}
 
+	if(requestPeriodSeconds > MaxSecondsBetweenWifiRequest)
+	{
+		requestPeriodSeconds = MaxSecondsBetweenWifiRequest;
+	}
+	else if (requestPeriodSeconds < MinSecondsBetweenWifiRequest)
+	{
+		requestPeriodSeconds = MinSecondsBetweenWifiRequest;
+	}
+
 	htim1.Instance->ARR = writeSDPeriodSeconds * TactsInOneSecond;
 	htim2.Instance->ARR = transmitPeriodSeconds * TactsInOneSecond;
+	htim3.Instance->ARR = requestPeriodSeconds * TactsInOneSecond;
 }
 
 uint16_t GetSensorValue(void)
@@ -734,7 +753,6 @@ void WriteSensorData(const char* sensorID)
 	{
 		char line[100];
 
-		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 		snprintf(line, 99, "%s;%d:%d:%d;%d\n", sensorID, sTime.Hours, sTime.Minutes, sTime.Seconds, sensorValue);
 
 		WriteFile(line);
@@ -745,11 +763,10 @@ void WriteSensorData(const char* sensorID)
 
 void FromatSensorValueForWiFi(uint16_t sensorValue, char *result, size_t size)
 {
-	HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	snprintf(result, size, "%s|%s;%d/%d/%d %d:%d:%d;%d", SERVER_DATA,
-			mc_info.SensorID,
-			sDate.Month, sDate.Date, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds,
-			sensorValue);
+		mc_info.SensorID,
+		sDate.Month, sDate.Date, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds,
+		sensorValue);
 }
 
 void SendData(const char *data)

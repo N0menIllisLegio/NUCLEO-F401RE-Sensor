@@ -8,7 +8,6 @@
 
 void GetFileName(char *fileName, size_t fileNameLength)
 {
-	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 	snprintf(fileName, fileNameLength, "%d.csv", sDate.Date);
 }
 
@@ -17,8 +16,6 @@ void CreatePath(char *path, size_t pathLength)
 	size_t fileNameLength = 10;
 	char fileName[fileNameLength];
 	GetFileName(fileName, fileNameLength);
-
-	HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
 	snprintf(path, pathLength, "%d", sDate.Year);
 
