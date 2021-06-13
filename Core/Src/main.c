@@ -763,9 +763,15 @@ void WriteSensorData(const char* sensorID)
 
 void FromatSensorValueForWiFi(uint16_t sensorValue, char *result, size_t size)
 {
+	RTC_TimeTypeDef time = {0};
+	RTC_DateTypeDef date = {0};
+
+	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
+
 	snprintf(result, size, "%s|%s;%d/%d/%d %d:%d:%d;%d", SERVER_DATA,
 		mc_info.SensorID,
-		sDate.Month, sDate.Date, sDate.Year, sTime.Hours, sTime.Minutes, sTime.Seconds,
+		date.Month, date.Date, date.Year, time.Hours, time.Minutes, time.Seconds,
 		sensorValue);
 }
 
