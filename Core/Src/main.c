@@ -698,40 +698,40 @@ void LoadConfigs(void)
 	ParseStrParameter(buffer, "SensorID=", mc_info.SensorID, sizeof(mc_info.SensorID));
 	ParseStrParameter(buffer, "MicrocontrollerPassword=", mc_info.MicrocontrollerPassword, sizeof(mc_info.MicrocontrollerPassword));
 
-	int writeSDPeriodSeconds = ParseIntParameter(buffer, "WriteSDPeriodSeconds=", MinSecondsBetweenSDWrite);
-	int transmitPeriodSeconds = ParseIntParameter(buffer, "TransmitPeriodSeconds=", MinSecondsBetweenWifiTransmit);
-	int requestPeriodSeconds = ParseIntParameter(buffer, "RequestPeriodSeconds=", MinSecondsBetweenWifiRequest);
+	int writeSDIntervalSeconds = ParseIntParameter(buffer, "writeSDIntervalSeconds=", MinSecondsBetweenSDWrite);
+	int transmitIntervalSeconds = ParseIntParameter(buffer, "transmitIntervalSeconds=", MinSecondsBetweenWifiTransmit);
+	int requestIntervalSeconds = ParseIntParameter(buffer, "requestIntervalSeconds=", MinSecondsBetweenWifiRequest);
 
-	if(writeSDPeriodSeconds > MaxSecondsBetweenSDWrite)
+	if(writeSDIntervalSeconds > MaxSecondsBetweenSDWrite)
 	{
-		writeSDPeriodSeconds = MaxSecondsBetweenSDWrite;
+		writeSDIntervalSeconds = MaxSecondsBetweenSDWrite;
 	}
-	else if (writeSDPeriodSeconds < MinSecondsBetweenSDWrite)
+	else if (writeSDIntervalSeconds < MinSecondsBetweenSDWrite)
 	{
-		writeSDPeriodSeconds = MinSecondsBetweenSDWrite;
-	}
-
-	if(transmitPeriodSeconds > MaxSecondsBetweenWifiTransmit)
-	{
-		transmitPeriodSeconds = MaxSecondsBetweenWifiTransmit;
-	}
-	else if (transmitPeriodSeconds < MinSecondsBetweenWifiTransmit)
-	{
-		transmitPeriodSeconds = MinSecondsBetweenWifiTransmit;
+		writeSDIntervalSeconds = MinSecondsBetweenSDWrite;
 	}
 
-	if(requestPeriodSeconds > MaxSecondsBetweenWifiRequest)
+	if(transmitIntervalSeconds > MaxSecondsBetweenWifiTransmit)
 	{
-		requestPeriodSeconds = MaxSecondsBetweenWifiRequest;
+		transmitIntervalSeconds = MaxSecondsBetweenWifiTransmit;
 	}
-	else if (requestPeriodSeconds < MinSecondsBetweenWifiRequest)
+	else if (transmitIntervalSeconds < MinSecondsBetweenWifiTransmit)
 	{
-		requestPeriodSeconds = MinSecondsBetweenWifiRequest;
+		transmitIntervalSeconds = MinSecondsBetweenWifiTransmit;
 	}
 
-	htim1.Instance->ARR = writeSDPeriodSeconds * TactsInOneSecond;
-	htim2.Instance->ARR = transmitPeriodSeconds * TactsInOneSecond;
-	htim3.Instance->ARR = requestPeriodSeconds * TactsInOneSecond;
+	if(requestIntervalSeconds > MaxSecondsBetweenWifiRequest)
+	{
+		requestIntervalSeconds = MaxSecondsBetweenWifiRequest;
+	}
+	else if (requestIntervalSeconds < MinSecondsBetweenWifiRequest)
+	{
+		requestIntervalSeconds = MinSecondsBetweenWifiRequest;
+	}
+
+	htim1.Instance->ARR = writeSDIntervalSeconds * TactsInOneSecond;
+	htim2.Instance->ARR = transmitIntervalSeconds * TactsInOneSecond;
+	htim3.Instance->ARR = requestIntervalSeconds * TactsInOneSecond;
 }
 
 uint16_t GetSensorValue(void)
